@@ -3,9 +3,9 @@ import psycopg2
 from psycopg2.extras import execute_batch
 from typing import List, Dict
 
-from config.config import DB_CONFIG
 from etl.extract import extract_products
 from etl.transform import transform_products
+from config.config import ETL_POSTGRES_CONN_ID
 
 logging.basicConfig(
     level=logging.INFO,
@@ -46,7 +46,17 @@ VALUES (
 """
 
 def get_connection():
-    return psycopg2.connect(**DB_CONFIG)
+    from airflow.hooks.base import BaseHook
+
+    conn = BaseHook.get_connection(ETL_POSTGRES_CONN_ID)
+
+    return psycopg2.connect(
+        host=conn.host,
+        port=conn.port,
+        dbname=conn.schema,
+        user=conn.login,
+        password=conn.password,
+    )
 
 def load_to_postgres(rows: List[Dict]):
     logging.info("Connecting to postgreSQL")

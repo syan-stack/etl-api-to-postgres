@@ -1,7 +1,2 @@
-DB_CONFIG = {
-    "host": "localhost",
-    "port": 5432,
-    "dbname": "etl_db",
-    "user": "syamilazizi",
-    "password": "postgres"
-}
+ETL_POSTGRES_CONN_ID = "etl_postgres"
+
