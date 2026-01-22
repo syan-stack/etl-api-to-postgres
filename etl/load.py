@@ -3,8 +3,6 @@ import psycopg2
 from psycopg2.extras import execute_batch
 from typing import List, Dict
 
-from etl.extract import extract_products
-from etl.transform import transform_products
 from config.config import ETL_POSTGRES_CONN_ID
 
 logging.basicConfig(
@@ -20,7 +18,9 @@ CREATE TABLE IF NOT EXISTS raw_product_prices (
     base_price NUMERIC,
     simulated_price NUMERIC,
     snapshot_date DATE,
-    ingested_at TIMESTAMP
+    ingested_at TIMESTAMP,
+    CONSTRAINT raw_product_prices_uk
+        UNIQUE (product_id, snapshot_date)
 );
 """
 
@@ -42,8 +42,16 @@ VALUES (
     %(simulated_price)s,
     %(snapshot_date)s,
     %(ingested_at)s
-);
+)
+ON CONFLICT (product_id, snapshot_date)
+DO UPDATE SET
+    title = EXCLUDED.title,
+    category = EXCLUDED.category,
+    base_price = EXCLUDED.base_price,
+    simulated_price = EXCLUDED.simulated_price,
+    ingested_at = EXCLUDED.ingested_at;
 """
+
 
 def get_connection():
     from airflow.hooks.base import BaseHook
@@ -58,8 +66,9 @@ def get_connection():
         password=conn.password,
     )
 
+
 def load_to_postgres(rows: List[Dict]):
-    logging.info("Connecting to postgreSQL")
+    logging.info("Connecting to PostgreSQL")
     conn = get_connection()
     cur = conn.cursor()
 
@@ -71,21 +80,13 @@ def load_to_postgres(rows: List[Dict]):
         execute_batch(cur, INSERT_SQL, rows, page_size=1000)
 
         conn.commit()
-        logging.info("Data successfully loaded into PostgreSQl")
+        logging.info("Data successfully loaded into PostgreSQL")
 
     except Exception as e:
         conn.rollback()
-        logging.error(f"load data failed :< {e}")
+        logging.error(f"Load data failed: {e}")
         raise
 
     finally:
         cur.close()
         conn.close()
-
-if __name__ == "__main__":
-    products = extract_products()
-    transformed_data = transform_products(products)
-    load_to_postgres(transformed_data)
-
-     
-

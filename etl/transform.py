@@ -24,11 +24,10 @@ def generate_snapshot_dates(days: int = 365) -> List[datetime]:
 
 def transform_products(
     products: List[Dict],
-    days: int = 365,
-    variations_per_day: int = 7
+    days: int = 365
 ) -> List[Dict]:
     """
-    Transform product data into time-series price snapshots.
+    Transform product data into daily price snapshots (1 row per product per day).
     """
     logging.info("Starting transformation process")
 
@@ -37,20 +36,21 @@ def transform_products(
 
     for product in products:
         for date in dates:
-            for _ in range(variations_per_day):
-                snapshot = {
-                    "product_id": product["product_id"],
-                    "title": product["title"],
-                    "category": product["category"],
-                    "base_price": product["price"],
-                    "simulated_price": generate_price_variation(product["price"]),
-                    "snapshot_date": date,
-                    "ingested_at": datetime.utcnow()
-                }
-                snapshots.append(snapshot)
+            snapshot = {
+                "product_id": product["product_id"],
+                "title": product["title"],
+                "category": product["category"],
+                "base_price": product["price"],
+                "simulated_price": generate_price_variation(product["price"]),
+                "snapshot_date": date,
+                "ingested_at": datetime.utcnow()
+            }
+            snapshots.append(snapshot)
 
     logging.info(f"Generated {len(snapshots)} transformed rows")
     return snapshots
+
+
 
 
 if __name__ == "__main__":
